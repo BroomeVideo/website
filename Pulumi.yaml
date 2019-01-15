@@ -1,0 +1,7 @@
+name: website
+runtime: nodejs
+template:
+  description:
+  config:
+    aws:region:
+      default: us-west-2
