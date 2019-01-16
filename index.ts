@@ -15,7 +15,7 @@ const siteBucket = new aws.s3.Bucket("website", {
     }
 });
 
-// Upload all website files
+// Add all website files to the bucket.
 siteFiles.forEach((path: string) => {
     if (!fs.lstatSync(path).isDirectory()) {
       const bucketObject = new aws.s3.BucketObject(path.replace(siteDir, ""), {
@@ -26,7 +26,7 @@ siteFiles.forEach((path: string) => {
     }
 });
 
-// Create an S3 Bucket Policy to allow public read of all objects in bucket.
+// Create a bucket policy that allows public read access for all objects in the bucket.
 const publicReadPolicyForBucket = (name: string) => {
     return JSON.stringify({
         Version: "2012-10-17",
@@ -43,10 +43,11 @@ const publicReadPolicyForBucket = (name: string) => {
     });
 };
 
+// Apply the policy to the bucket.
 const bucketPolicy = new aws.s3.BucketPolicy("bucketPolicy", {
     bucket: siteBucket.bucket,
     policy: siteBucket.bucket.apply(publicReadPolicyForBucket),
 });
 
-// Export the DNS name of the bucket.
-exports.websiteUrl = siteBucket.websiteEndpoint;
+// Export the website's public hostname.
+exports.host = siteBucket.websiteEndpoint;
