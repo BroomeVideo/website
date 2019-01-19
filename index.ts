@@ -7,8 +7,12 @@ import * as fs from "fs";
 const siteDir = 'public';
 const siteFiles = glob.sync(`${siteDir}/**/*`);
 
+const config = new pulumi.Config();
+export const domain = config.require("domain");
+
 // Create an S3 bucket for the website.
 const siteBucket = new aws.s3.Bucket("website", {
+    bucket: domain,
     website: {
         indexDocument: "index.html",
         errorDocument: "404.html"
@@ -49,5 +53,32 @@ const bucketPolicy = new aws.s3.BucketPolicy("bucketPolicy", {
     policy: siteBucket.bucket.apply(publicReadPolicyForBucket),
 });
 
-// Export the website's public hostname.
-exports.host = siteBucket.websiteEndpoint;
+// Create a Route53 alias record for the bucket.
+async function createAliasRecord(bucket: aws.s3.Bucket, targetDomain: string): Promise<aws.route53.Record> {
+    const [alias, ...parent] = targetDomain.split(".");
+
+    // Query AWS for the parent domain's hosted zone ID in order to associate
+    // it with the new alias record.
+    const parentZone = await aws.route53.getZone({ name: `${parent.join(".")}.` });
+
+    return new aws.route53.Record(
+        targetDomain,
+        {
+            name: alias,
+            zoneId: parentZone.zoneId,
+            type: "A",
+            aliases: [
+                {
+                    name: bucket.websiteDomain,
+                    zoneId: bucket.hostedZoneId,
+                    evaluateTargetHealth: true,
+                },
+            ],
+        }
+    );
+}
+
+createAliasRecord(siteBucket, domain);
+
+// Export the website's public hostname and domain name.
+export const origin = siteBucket.websiteEndpoint;
