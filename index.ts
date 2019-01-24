@@ -9,6 +9,7 @@ const siteFiles = glob.sync(`${siteDir}/**/*`);
 
 const config = new pulumi.Config();
 export const domain = config.require("domain");
+export const url = `http://${domain}`;
 
 // Create an S3 bucket for the website.
 const siteBucket = new aws.s3.Bucket("website", {
@@ -80,5 +81,5 @@ async function createAliasRecord(bucket: aws.s3.Bucket, targetDomain: string): P
 
 createAliasRecord(siteBucket, domain);
 
-// Export the website's public hostname and domain name.
-export const origin = siteBucket.websiteEndpoint;
+// Export the website's public hostname.
+export const host = siteBucket.websiteEndpoint;
